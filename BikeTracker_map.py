@@ -32,16 +32,16 @@ def load_data():
 
 df = load_data()
 
+# Фильтры
 st.sidebar.header("Фильтры")
 
 if not df.empty:
     map_mode = st.sidebar.radio("Режим карты", ["Интенсивность (проездов/ч)", "Количество событий"])
     event = st.sidebar.radio("Тип события", ["Проезд", "Парковка"])
     city_query = st.sidebar.text_input(
-    "Поиск города / адреса", 
-    "", 
-    placeholder="Например: Москва, Сокольники")
-    st.sidebar.caption("💡 Для поиска района используй формат: **Город, Район**")
+    "Поиск города / адреса",
+    placeholder="Город, район, улица")
+    # st.sidebar.caption("Место для подсказки")
 
     min_date = df['dateTime'].dt.date.min()
     max_date = df['dateTime'].dt.date.max()
@@ -57,16 +57,22 @@ if not df.empty:
             date_start, date_end = min_date, max_date
 
     hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
-    resolution = st.sidebar.select_slider("Размер гексагона", options=[5, 6, 7, 8, 9, 10, 11, 12, 13], value=10) #Значения возможных размеров гексагонов и размер по-умолчанию
-    st.sidebar.caption("Чем выше значение, тем меньше гексагон и больше точность.")
-    st.sidebar.caption("Рекомендации: 5-6 для межгорода, 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (возможны неточности)")
 
+    #Установка возможных размеров гексагонов и размер по-умолчанию
+    resolution = st.slider("Размер гексагона", min_value=5, max_value=12, value=10) 
+    st.sidebar.caption("Рекомендации: 5-6 для межгорода, 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
+    if selected_mode == "Интенсивность":
+        effective_res = min(resolution, 10)
+    else:
+        effective_res = resolution
+    
     filtered_df = df[
         (df['eventType'] == event) & 
         (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
         (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
     ]
 
+    # Расчёт интенсивности
     if not filtered_df.empty:
         filtered_df['h3'] = filtered_df.apply(
             lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], resolution), axis=1
