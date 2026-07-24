@@ -65,6 +65,7 @@ if not df.empty:
         effective_res = max(resolution, 10)
     else:
         effective_res = resolution
+
     
     filtered_df = df[
         (df['eventType'] == event) & 
@@ -138,11 +139,14 @@ if not df.empty:
         )
 
         # Отрисовка карты
-        st.pydeck_chart(pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
-            tooltip={"text": tooltip_txt}
-            ))
+        if resolution > 10:
+            st.sidebar.caption("Выберите другой размер или смените фильтр "Интенсивность" на "Количество событий"")
+        else:
+            st.pydeck_chart(pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={"text": tooltip_txt}
+                ))
         
         map_lat = filtered_df['latitude'].mean()
         map_lon = filtered_df['longitude'].mean()
