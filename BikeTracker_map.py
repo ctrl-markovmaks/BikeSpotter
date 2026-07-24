@@ -140,7 +140,7 @@ if not df.empty:
 
         # Отрисовка карты
         if resolution > 10:
-            st.sidebar.caption("Выберите другой размер или смените фильтр "Интенсивность" на "Количество событий"")
+            st.sidebar.caption("Выберите другой размер или смените фильтр Интенсивность на Количество событий")
         else:
             st.pydeck_chart(pdk.Deck(
                 layers=[layer],
