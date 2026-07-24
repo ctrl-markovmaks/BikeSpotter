@@ -61,7 +61,7 @@ if not df.empty:
     #Установка возможных размеров гексагонов и размер по-умолчанию
     resolution = st.slider("Размер гексагона", min_value=5, max_value=12, value=10) 
     st.sidebar.caption("Рекомендации: 5-6 для межгорода, 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
-    if selected_mode == "Интенсивность":
+    if selected_mode == "Интенсивность": # Ограничиваем размер гексагона для корректного расчёта и отображения при выбранном фильтре Интенсивность
         effective_res = min(resolution, 10)
     else:
         effective_res = resolution
@@ -82,10 +82,10 @@ if not df.empty:
 
         H3_SIZES_KM = {
             5: 8.54, 6: 3.23, 7: 1.22, 8: 0.46,
-            9: 0.17, 10: 0.066, 11: 0.025, 12: 0.009, 13: 0.0035
+            9: 0.17, 10: 0.066
         } # Список размеров гексагонов
         
-        def calc_session_rate(group, res=8, walk_speed_kmh=4, discount=0.75):
+        def calc_session_rate(group, effective_res=8, walk_speed_kmh=4, discount=0.75):
             n = len(group)
             duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
             duration_min = max(duration_min, 1.0)
@@ -95,7 +95,7 @@ if not df.empty:
             if duration_min >= 10.0 or is_pro:
                 return (n * 60.0) / duration_min # Для профессиональных или долгих замеров нам не нужно знать, сколько времени человек провёл в гексагоне
                 
-                hex_size_km = H3_SIZES_KM.get(res, 0.46)
+                hex_size_km = H3_SIZES_KM.get(effective_res, 0.46)
                 walk_time_hours = hex_size_km / walk_speed_kmh
     
                 # Применяем формула + понижающий коэффициент для непрофессиональных коротких замеров
