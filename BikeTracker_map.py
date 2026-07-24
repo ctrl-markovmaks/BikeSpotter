@@ -66,129 +66,97 @@ with tab_map:
 
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
-    #Установка возможных размеров гексагонов и размер по-умолчанию
-        resolution = st.slider("Размер гексагона", min_value=5, max_value=12, value=10) 
+    # Установка возможных размеров гексагонов и размер по умолчанию
+        resolution = st.sidebar.slider("Размер гексагона", min_value=5, max_value=12, value=10) 
         st.sidebar.caption("Рекомендации: 5-6 для межгорода, 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
-        if map_mode == "Интенсивность": # Ограничиваем размер гексагона для корректного расчёта и отображения при выбранном фильтре Интенсивность
-            effective_res = max(resolution, 10)
+
+# Проверяем, выбран ли режим интенсивности для проезда
+        is_parking = "парк" in str(event).lower()
+        is_intensity_drive = (map_mode == "Интенсивность") and (not is_parking)
+
+# Если выбрана Интенсивность+Проезд и размер 11 или 12 — скрываем карту и выводим предупреждение
+        if is_intensity_drive and resolution > 10:
+            st.warning("Расчёт интенсивности для проездов доступен только для размеров гексагона от 5 до 10. Пожалуйста, уменьшите размер или переключите режим на 'Количество событий'.")
         else:
             effective_res = resolution
 
-    
-        filtered_df = df[
-            (df['eventType'] == event) & 
-            (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
-            (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
-        ]
+            filtered_df = df[
+                (df['eventType'] == event) & 
+                (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
+                (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
+            ]
 
-    # Расчёт интенсивности
-        if not filtered_df.empty:
-            filtered_df['h3'] = filtered_df.apply(
-                lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
-            )
+            if not filtered_df.empty:
+                filtered_df['h3'] = filtered_df.apply(
+                    lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
+                )
         
-            filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
+                filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
 
-            H3_SIZES_KM = {
-                5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
-                9: 0.29444, 10: 0.114312
-            } # Список длин граней гексагонов, умноженных на 1,732
-        
-            def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
-                n = len(group)
-                duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
-                duration_min = max(duration_min, 1.0)
+                H3_SIZES_KM = {
+                    5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
+                    9: 0.29444, 10: 0.114312
+                } # Длины граней гексагонов * 1,732
             
-                is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
+                def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
+                    n = len(group)
+                    duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
+                    duration_min = max(duration_min, 1.0)
+            
+                    is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
             
                 if duration_min >= 10.0 or is_pro:
-                    return (n * 60.0) / duration_min # Для профессиональных или долгих замеров нам не нужно знать, сколько времени человек провёл в гексагоне
+                        return (n * 60.0) / duration_min
                 else:
                     hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                     walk_time_hours = hex_size_km / walk_speed_kmh
-                # Применяем формула + понижающий коэффициент для непрофессиональных коротких замеров
                     return ((1.0 / walk_time_hours) * n) * discount
 
-        # Выбор логики: если выбраны события ИЛИ в типе события есть "парк"
-            if map_mode == "Количество событий" or "парк" in str(event).lower():
-                hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
-                tooltip_txt = "Количество событий: {count}"
-            else:
-                session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                session_rates.columns = ['date_hour', 'h3', 'rate']
-                hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
-                hex_df.columns = ['h3', 'count']
-                hex_df['count'] = hex_df['count'].round(1)
-                tooltip_txt = "Интенсивность: {count} в час"
+        # Выбор логики отображения
+                if map_mode == "Количество событий" or is_parking:
+                    hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
+                    tooltip_txt = "Количество событий: {count}"
+                else:
+                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
+                    session_rates.columns = ['date_hour', 'h3', 'rate']
+                    hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
+                    hex_df.columns = ['h3', 'count']
+                    hex_df['count'] = hex_df['count'].round(1)
+                    tooltip_txt = "Интенсивность: {count} в час"
 
-        # Определение координат и ViewState
-            map_lat = filtered_df['latitude'].mean()
-            map_lon = filtered_df['longitude'].mean()
+        # Определение центра карты
+                map_lat = filtered_df['latitude'].mean()
+                map_lon = filtered_df['longitude'].mean()
 
-            if city_query:
-                try:
-                    geolocator = Nominatim(user_agent="sim_tracker_app")
-                    location = geolocator.geocode(city_query)
-                    if location:
-                        map_lat, map_lon = location.latitude, location.longitude
-                except Exception:
-                    pass
+                if city_query:
+                    try:
+                        geolocator = Nominatim(user_agent="sim_tracker_app")
+                        location = geolocator.geocode(city_query)
+                        if location:
+                            map_lat, map_lon = location.latitude, location.longitude
+                        else:
+                            st.sidebar.warning("Локация не найдена")
+                    except Exception:
+                        st.sidebar.error("Ошибка сервиса геокодинга")
 
-            view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
+                view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
 
-            # Создание слоя
-            layer = pdk.Layer(
-                 "H3HexagonLayer",
-                hex_df,
-                get_hexagon="h3",
-                get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
-                pickable=True,
-                extruded=False,
-            )
+                layer = pdk.Layer(
+                    "H3HexagonLayer",
+                    hex_df,
+                    get_hexagon="h3",
+                    get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
+                    pickable=True,
+                    extruded=False,
+                )
 
-        # Отрисовка карты
-            if resolution > 10:
-                st.sidebar.caption("Выберите другой размер или смените фильтр Интенсивность на Количество событий")
-            else:
                 st.pydeck_chart(pdk.Deck(
                     layers=[layer],
                     initial_view_state=view_state,
                     tooltip={"text": tooltip_txt}
-                    ))
-        
-            map_lat = filtered_df['latitude'].mean()
-            map_lon = filtered_df['longitude'].mean()
-
-            if city_query:
-                try:
-                    geolocator = Nominatim(user_agent="sim_tracker_app")
-                    location = geolocator.geocode(city_query)
-                    if location:
-                        map_lat, map_lon = location.latitude, location.longitude
-                    else:
-                        st.sidebar.warning("Локация не найдена")
-                except Exception:
-                    st.sidebar.error("Ошибка сервиса геокодинга")
-
-            view_state = pdk.ViewState(
-                latitude=map_lat,
-                longitude=map_lon,
-                zoom=10,
-                pitch=0
-            )
-        
-        else:
-            st.warning("Нет данных по выбранным фильтрам")
-
-        st.subheader("Сводка по дням")
-    if not filtered_df.empty:
-        daily = filtered_df.groupby(filtered_df['dateTime'].dt.date).agg(
-            Всего_событий=('eventType', 'count'),
-            Задействовано_зон=('h3', 'nunique')
-        )
-        st.dataframe(daily, use_container_width=True)
-    else:
-        st.error("В таблице нет корректных данных.")
+                ))
+            else:
+                st.warning("Нет данных по выбранным фильтрам")
 
 
 # Страница "Цифры"
