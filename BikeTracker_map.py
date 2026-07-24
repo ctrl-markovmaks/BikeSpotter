@@ -75,7 +75,7 @@ if not df.empty:
     # Расчёт интенсивности
     if not filtered_df.empty:
         filtered_df['h3'] = filtered_df.apply(
-            lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res=resolution), axis=1
+            lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
         )
         
         filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
@@ -105,7 +105,7 @@ if not df.empty:
             hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
             tooltip_txt = "Количество событий: {count}"
         else:
-            session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate).reset_index()
+            session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
             session_rates.columns = ['date_hour', 'h3', 'rate']
             hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
             hex_df.columns = ['h3', 'count']
