@@ -82,9 +82,9 @@ if not df.empty:
         filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
 
         H3_SIZES_KM = {
-            5: 8.54, 6: 3.23, 7: 1.22, 8: 0.46,
-            9: 0.17, 10: 0.066
-        } # Список размеров гексагонов
+            5: 14.79128, 6: 5.59436, 7: 2,11304, 8: 0.79672,
+            9: 0.29444, 10: 0.114312
+        } # Список длин граней гексагонов, умноженных на 1,732
         
         def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
             n = len(group)
