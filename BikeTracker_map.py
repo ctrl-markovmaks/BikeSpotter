@@ -106,7 +106,7 @@ with tab_map:
                     is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
             
                 if duration_min >= 10.0 or is_pro:
-                        return (n * 60.0) / duration_min
+                    return (n * 60.0) / duration_min
                 else:
                     hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                     walk_time_hours = hex_size_km / walk_speed_kmh
