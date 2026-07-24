@@ -202,7 +202,13 @@ with tab_stats:
     c2.metric("Парковки", park_count)
     c3.metric("Проезды", len(df) - park_count)
     
-    users = df['userId'].nunique() if 'userId' in df.columns else 0
+    tech_id = "00000000-0000-0000-0000-000000000000"
+    if 'userId' in df.columns:
+        valid_users = df['userId'].dropna().astype(str).str.strip()
+        users = valid_users[valid_users != tech_id].nunique()
+    else:
+        users = 0
+
     c4.metric("Счётчиков", users)
     
     if 'receivedAt' in df.columns:
