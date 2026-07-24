@@ -29,6 +29,9 @@ def load_data():
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
     return df
+# Просьба присылать фото для добавления данных
+st.info("Есть фотографии проезжающих или припаркованных велосипедов?")
+st.link_button("📸 Прислать фото через Google Форму", "https://docs.google.com/forms/d/e/1FAIpQLSeEpM74U7KLOYIIAYUdZnjj-voIFrFby6Nf-GTpCIxmRiJPvw/viewform?usp=publish-editor")
 # Создание страниц
 tab_map, tab_stats, tab_about = st.tabs(["Главная", "Цифры", "О проекте"])
 
