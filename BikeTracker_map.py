@@ -29,11 +29,11 @@ def load_data():
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
     return df
-
+# Плашка с информацией. background-color - цвет подложки, color - цвет текста, padding, border-radius, font-weight. Цвета в HEX формате
 st.markdown(
     """
-    <div style="background-color: #fcf403; color: #000000; padding: 12px; border-radius: 8px; font-weight: 500;">
-        Сайт в разработке. Его наполнение и метод расчёта интенсивности может меняться. Используйте с осторожностью данные об интенсивности.
+    <div style="background-color: #d9d321; color: #000000; padding: 12px; border-radius: 8px; font-weight: 500;">
+        Сайт в разработке. Его наполнение и метод расчёта интенсивности может меняться. Используйте данные об интенсивности для ознакомления.
     </div>
     """,
     unsafe_allow_html=True
