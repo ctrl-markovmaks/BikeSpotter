@@ -195,21 +195,19 @@ with tab_map:
 with tab_stats:
     st.header("Статистика")
     
-    # Метрики в один ряд
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Всего записей", len(filtered_df))
+    c1.metric("Всего записей", len(df))
     
-    park_count = filtered_df['eventType'].astype(str).str.contains('парк', case=False).sum()
+    park_count = df['eventType'].astype(str).str.contains('парк', case=False).sum()
     c2.metric("Парковки", park_count)
-    c3.metric("Проезды", len(filtered_df) - park_count)
+    c3.metric("Проезды", len(df) - park_count)
     
-    users = filtered_df['userId'].nunique() if 'userId' in filtered_df.columns else 0
+    users = df['userId'].nunique() if 'userId' in df.columns else 0
     c4.metric("Счётчиков", users)
     
-    # Линейный график по дням
-    if 'receivedAt' in filtered_df.columns:
+    if 'receivedAt' in df.columns:
         st.subheader("Динамика поступивших данных")
-        chart_df = filtered_df.copy()
+        chart_df = df.copy()
         chart_df['day'] = pd.to_datetime(chart_df['receivedAt']).dt.date
         st.line_chart(chart_df.groupby('day').size())
 
