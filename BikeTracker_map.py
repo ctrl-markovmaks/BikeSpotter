@@ -29,9 +29,16 @@ def load_data():
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
     return df
-# Просьба присылать фото для добавления данных
-st.info("Есть фотографии проезжающих или припаркованных велосипедов?")
-st.link_button("📸 Прислать фото через Google Форму", "https://docs.google.com/forms/d/e/1FAIpQLSeEpM74U7KLOYIIAYUdZnjj-voIFrFby6Nf-GTpCIxmRiJPvw/viewform?usp=publish-editor")
+
+st.markdown(
+    """
+    <div style="background-color: #fcf403; color: #000000; padding: 12px; border-radius: 8px; font-weight: 500;">
+        Сайт в разработке. Его наполнение и метод расчёта интенсивности может меняться. Используйте с осторожностью данные об интенсивности.
+    </div>
+    """,
+    unsafe_allow_html=True
+) # Просьба присылать фото для добавления данных
+st.link_button("📸 Прислать фото (Google Формы)", "https://docs.google.com/forms/d/e/1FAIpQLSeEpM74U7KLOYIIAYUdZnjj-voIFrFby6Nf-GTpCIxmRiJPvw/viewform?usp=publish-editor")
 # Создание страниц
 tab_map, tab_stats, tab_about = st.tabs(["Главная", "Цифры", "О проекте"])
 
@@ -40,8 +47,9 @@ tab_map, tab_stats, tab_about = st.tabs(["Главная", "Цифры", "О п�
 with tab_map:
     df = load_data()
 
-    st.sidebar.header("Сайт в разработке")
-    st.sidebar.caption("Наполнение сайта может меняться. Также возможно изменение методики расчёта интенсивности")
+    st.sidebar.header("Bike Spotter")
+    st.sidebar.caption("Собираем данные о велодвижении в городах")
+    st.sidebar.caption("Сайт энтузиаста для энтузиастов")
 
 # Фильтры
     st.sidebar.header("Фильтры")
