@@ -75,7 +75,7 @@ if not df.empty:
     # Расчёт интенсивности
     if not filtered_df.empty:
         filtered_df['h3'] = filtered_df.apply(
-            lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], resolution), axis=1
+            lambda r: h3.effective_res(r['latitude'], r['longitude'], resolution), axis=1
         )
         
         filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
