@@ -99,7 +99,7 @@ if not df.empty:
                 walk_time_hours = hex_size_km / walk_speed_kmh
     
                 # Применяем формула + понижающий коэффициент для непрофессиональных коротких замеров
-        return ((1.0 / walk_time_hours) * n) * discount
+            return ((1.0 / walk_time_hours) * n) * discount
 
         # Выбор логики: если выбраны события ИЛИ в типе события есть "парк"
         if map_mode == "Количество событий" or "парк" in str(event).lower():
