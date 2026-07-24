@@ -74,19 +74,26 @@ if not df.empty:
         
         filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
 
-        def calc_session_rate(group):
+        H3_SIZES_KM = {
+            5: 8.54, 6: 3.23, 7: 1.22, 8: 0.46,
+            9: 0.17, 10: 0.066, 11: 0.025, 12: 0.009, 13: 0.0035
+        } # Список размеров гексагонов
+        
+        def calc_session_rate(group, res=8, walk_speed_kmh=4, discount=0.75):
             n = len(group)
-            if n == 1:
-                return 1.0
             duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
             duration_min = max(duration_min, 1.0)
-
-            rate = (n * 60.0) / duration_min
-
-            if duration_min < 10.0:
-                rate *= 0.75
-        
-            return rate
+            
+            is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
+            
+            if duration_min >= 10.0 or is_pro:
+                return (n * 60.0) / duration_min # Для профессиональных или долгих замеров нам не нужно знать, сколько времени человек провёл в гексагоне
+                
+                hex_size_km = H3_SIZES_KM.get(res, 0.46)
+                walk_time_hours = hex_size_km / walk_speed_kmh
+    
+                # Применяем формула + понижающий коэффициент для непрофессиональных коротких замеров
+        return ((1.0 / walk_time_hours) * n) * discount
 
         # Выбор логики: если выбраны события ИЛИ в типе события есть "парк"
         if map_mode == "Количество событий" or "парк" in str(event).lower():
