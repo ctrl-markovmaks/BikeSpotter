@@ -93,13 +93,12 @@ if not df.empty:
             is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
             
             if duration_min >= 10.0 or is_pro:
-                return (n * 60.0) / duration_min # Для профессиональных или долгих замеров нам не нужно знать, сколько времени человек провёл в гексагоне
-                
+                return (n * 60.0) / duration_min # Для профессиональных или долгих замеров нам не нужно знать, сколько времени человек провёл в гексагоне\
+            else:
                 hex_size_km = H3_SIZES_KM.get(effective_res, 0.46)
                 walk_time_hours = hex_size_km / walk_speed_kmh
-    
                 # Применяем формула + понижающий коэффициент для непрофессиональных коротких замеров
-            return ((1.0 / walk_time_hours) * n) * discount
+                return ((1.0 / walk_time_hours) * n) * discount
 
         # Выбор логики: если выбраны события ИЛИ в типе события есть "парк"
         if map_mode == "Количество событий" or "парк" in str(event).lower():
