@@ -32,6 +32,9 @@ def load_data():
 
 df = load_data()
 
+st.sidebar.header(":Red[Сайт в разработке]")
+st.sidebar.caption("Наполнение сайта может меняться. Также возможно изменение методики расчёта интенсивности")
+
 # Фильтры
 st.sidebar.header("Фильтры")
 
