@@ -163,8 +163,8 @@ with tab_map:
                     tooltip_txt = "Интенсивность: {count} в час"
 
         # Определение центра карты
-                map_lat = filtered_df['latitude'].mean()
-                map_lon = filtered_df['longitude'].mean()
+                #map_lat = filtered_df['latitude'].mean()
+                #map_lon = filtered_df['longitude'].mean()
 
                 if city_query:
                     try:
@@ -177,24 +177,24 @@ with tab_map:
                     except Exception:
                         st.sidebar.error("Ошибка сервиса геокодинга")
 
-                    view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
+                view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
 
-                    layer = pdk.Layer(
-                        "H3HexagonLayer",
-                        hex_df,
-                        get_hexagon="h3",
-                        get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
-                        pickable=True,
-                        extruded=False,
-                    )
+                layer = pdk.Layer(
+                    "H3HexagonLayer",
+                    hex_df,
+                    get_hexagon="h3",
+                    get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
+                    pickable=True,
+                    extruded=False,
+                )
 
-                    st.pydeck_chart(pdk.Deck(
-                        layers=[layer],
-                        initial_view_state=view_state,
-                        tooltip={"text": tooltip_txt}
-                    ))
-                else:
-                    st.warning("Нет данных по выбранным фильтрам")
+                st.pydeck_chart(pdk.Deck(
+                    layers=[layer],
+                    initial_view_state=view_state,
+                    tooltip={"text": tooltip_txt}
+                ))
+        else:
+            st.warning("Нет данных по выбранным фильтрам")
 
 
 # Страница "Цифры"
