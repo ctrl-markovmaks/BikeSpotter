@@ -92,8 +92,8 @@ with tab_map:
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
     # Установка возможных размеров гексагонов и размер по умолчанию
-        resolution = st.sidebar.slider("Размер гексагона", min_value=5, max_value=12, value=10) 
-        st.sidebar.caption("Рекомендации: 5-6 для межгорода, 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
+        resolution = st.sidebar.slider("Размер гексагона", min_value=7, max_value=12, value=10) 
+        st.sidebar.caption("Рекомендации: 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
 
 # Проверяем, выбран ли режим интенсивности для проезда
         is_parking = "парк" in str(event).lower()
@@ -130,7 +130,9 @@ with tab_map:
                 is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
                     
 # Определение уровня достоверности
-                if is_pro or duration_min >= 15.0:
+                if effective_res <= 8:
+                    conf = "Низкая"
+                elif is_pro or duration_min >= 15.0:
                     conf = "Высокая"
                 elif duration_min >= 5.0:
                     conf = "Средняя"
@@ -162,11 +164,14 @@ with tab_map:
                     st.warning("Нет данных с выбранным уровнем достоверности")
                     has_data = False
                 else:
-                    hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
-                    hex_df.columns = ['h3', 'count']
+                    hex_df = session_rates.groupby('h3', as_index=False).agg(
+                        count=('rate', 'mean'),
+                        conf=('conf', lambda x: ', '.join(x.unique()))
+                    )
                     hex_df['count'] = hex_df['count'].round(1)
-                    tooltip_txt = "Интенсивность: {count} в час"
+                    tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}"
                     has_data = True
+                    
             if has_data:
                 if city_query:
                     try:
