@@ -155,8 +155,8 @@ with tab_map:
                 tooltip_txt = "Количество событий: {count}"
             else:
                 session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                session_rates = session_rates.dropna(subset=['rate'])
                 session_rates.columns = ['date_hour', 'h3', 'rate']
+                session_rates = session_rates.dropna(subset=['rate'])
                 hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
                 hex_df.columns = ['h3', 'count']
                 hex_df['count'] = hex_df['count'].round(1)
