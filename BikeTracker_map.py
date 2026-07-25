@@ -151,32 +151,35 @@ with tab_map:
             if map_mode == "Количество событий" or is_parking:
                 hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
                 tooltip_txt = "Количество событий: {count}"
+                has_data = True
             else:
                 session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
                 # Фильтрация по галочкам
                 session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
                 if session_rates.empty:
                     st.warning("Нет данных с выбранным уровнем достоверности")
+                    has_data = False
                 else:
                     hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
                     hex_df.columns = ['h3', 'count']
                     hex_df['count'] = hex_df['count'].round(1)
                     tooltip_txt = "Интенсивность: {count} в час"
-
+                    has_data = True
+            if has_data:
         # Определение центра карты
-            map_lat = filtered_df['latitude'].mean()
-            map_lon = filtered_df['longitude'].mean()
+                map_lat = filtered_df['latitude'].mean()
+                map_lon = filtered_df['longitude'].mean()
 
-        if city_query:
-            try:
-                geolocator = Nominatim(user_agent="sim_tracker_app")
-                location = geolocator.geocode(city_query)
-                if location:
-                    map_lat, map_lon = location.latitude, location.longitude
-                else:
-                    st.sidebar.warning("Локация не найдена")
-            except Exception:
-                st.sidebar.error("Ошибка сервиса геокодинга")
+            if city_query:
+                try:
+                    geolocator = Nominatim(user_agent="sim_tracker_app")
+                    location = geolocator.geocode(city_query)
+                    if location:
+                        map_lat, map_lon = location.latitude, location.longitude
+                    else:
+                        st.sidebar.warning("Локация не найдена")
+                except Exception:
+                    st.sidebar.error("Ошибка сервиса геокодинга")
 
             view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
 
@@ -194,8 +197,8 @@ with tab_map:
                 initial_view_state=view_state,
                 tooltip={"text": tooltip_txt}
             ))
-        else:
-            st.warning("Нет данных по выбранным фильтрам")
+    else:
+        st.warning("Нет данных по выбранным фильтрам")
 
 
 # Страница "Цифры"
