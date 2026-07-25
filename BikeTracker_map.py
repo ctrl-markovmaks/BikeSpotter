@@ -193,8 +193,8 @@ with tab_map:
                     initial_view_state=view_state,
                     tooltip={"text": tooltip_txt}
                 ))
-            else:
-                st.warning("Нет данных по выбранным фильтрам")
+                else:
+                    st.warning("Нет данных по выбранным фильтрам")
 
 
 # Страница "Цифры"
