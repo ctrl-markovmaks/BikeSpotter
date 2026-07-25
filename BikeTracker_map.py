@@ -61,6 +61,19 @@ with tab_map:
         "Поиск города / адреса",
         placeholder="Город, район, улица")
         # st.sidebar.caption("Место для подсказки")
+        st.sidebar.subheader("Достоверность данных")
+        conf_low = st.sidebar.checkbox("Низкая (< 5 мин)")
+        conf_med = st.sidebar.checkbox("Средняя (5–15 мин)")
+        conf_high = st.sidebar.checkbox("Высокая (≥ 15 мин / Pro)")
+
+        # Собираем выбранные варианты
+        selected_conf = []
+        if conf_low: selected_conf.append("Низкая")
+        if conf_med: selected_conf.append("Средняя")
+        if conf_high: selected_conf.append("Высокая")
+        # Если ничего не выбрано — показываем все
+        if not selected_conf:
+            selected_conf = ["Низкая", "Средняя", "Высокая"]
 
         min_date = df['dateTime'].dt.date.min()
         max_date = df['dateTime'].dt.date.max()
@@ -91,16 +104,16 @@ with tab_map:
         else:
             effective_res = resolution
 
-            filtered_df = df[
-                (df['eventType'] == event) & 
-                (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
-                (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
+        filtered_df = df[
+            (df['eventType'] == event) & 
+            (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
+            (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
             ]
 
-            if not filtered_df.empty:
-                filtered_df['h3'] = filtered_df.apply(
-                    lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
-                )
+        if not filtered_df.empty:
+            filtered_df['h3'] = filtered_df.apply(
+                lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
+            )
         
                 filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
 
@@ -110,14 +123,27 @@ with tab_map:
                 } # Длины граней гексагонов * 1,732
             
                 def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
-                    n = len(group)
                     duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
-                    duration_min = max(duration_min, 1.0)
-            
                     is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
-            
-                    if duration_min >= 10.0 or is_pro:
-                        return (n * 60.0) / duration_min
+                    
+                # 1. Определение уровня достоверности
+                    if is_pro or duration_min >= 15.0:
+                        conf = "Высокая"
+                    elif duration_min >= 5.0:
+                        conf = "Средняя"
+                    else:
+                        conf = "Низкая"
+        
+    # 2. Если уровень не выбран в фильтре — пропускаем замер
+                    if conf not in selected_conf:
+                        return None
+        
+    # 3. Расчёт интенсивности
+                    n = len(group)
+                    duration_calc = max(duration_min, 1.0)
+    
+                    if duration_calc >= 10.0 or is_pro:
+                        return (n * 60.0) / duration_calc
                     else:
                         hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                         walk_time_hours = hex_size_km / walk_speed_kmh
@@ -129,6 +155,7 @@ with tab_map:
                     tooltip_txt = "Количество событий: {count}"
                 else:
                     session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
+                    session_rates = session_rates.dropna(subset=['rate'])
                     session_rates.columns = ['date_hour', 'h3', 'rate']
                     hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
                     hex_df.columns = ['h3', 'count']
