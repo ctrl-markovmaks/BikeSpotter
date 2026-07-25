@@ -56,7 +56,7 @@ with tab_map:
     st.sidebar.header("Фильтры")
 
     if not df.empty:
-        map_mode = st.sidebar.radio("Режим карты", ["Интенсивность (проездов/ч)", "Количество событий"])
+        map_mode = st.sidebar.radio("Режим карты", ["Интенсивность", "Количество событий"])
         event = st.sidebar.radio("Тип события", ["Проезд", "Парковка"])
         city_query = st.sidebar.text_input(
         "Поиск города / адреса",
@@ -140,62 +140,62 @@ with tab_map:
                 duration_calc = max(duration_min, 1.0)
     
                 if duration_calc >= 10.0 or is_pro:
-                    rete = (n * 60.0) / duration_calc
+                    rate = (n * 60.0) / duration_calc
                 else:
                     hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                     walk_time_hours = hex_size_km / walk_speed_kmh
-                    rete ((1.0 / walk_time_hours) * n) * discount
+                    rate = ((1.0 / walk_time_hours) * n) * discount
                 return pd.Series({'rate': rate, 'conf': conf})
 
 # Выбор логики отображения
-                if map_mode == "Количество событий" or is_parking:
-                    hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
-                    tooltip_txt = "Количество событий: {count}"
+            if map_mode == "Количество событий" or is_parking:
+                hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
+                tooltip_txt = "Количество событий: {count}"
+            else:
+                session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
+                # Фильтрация по галочкам
+                session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
+                if session_rates.empty:
+                    st.warning("Нет данных с выбранным уровнем достоверности")
                 else:
-                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                    # Фильтрация по галочкам
-                    session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
-                    if session_rates.empty:
-                        st.warning("Нет данных с выбранным уровнем достоверности")
-                    else:
-                        hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
-                        hex_df.columns = ['h3', 'count']
-                        hex_df['count'] = hex_df['count'].round(1)
-                        tooltip_txt = "Интенсивность: {count} в час"
+                    hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
+                    hex_df.columns = ['h3', 'count']
+                    hex_df['count'] = hex_df['count'].round(1)
+                    tooltip_txt = "Интенсивность: {count} в час"
 
         # Определение центра карты
             map_lat = filtered_df['latitude'].mean()
             map_lon = filtered_df['longitude'].mean()
 
-            if city_query:
-                try:
-                    geolocator = Nominatim(user_agent="sim_tracker_app")
-                    location = geolocator.geocode(city_query)
-                    if location:
-                        map_lat, map_lon = location.latitude, location.longitude
-                    else:
-                        st.sidebar.warning("Локация не найдена")
-                except Exception:
-                    st.sidebar.error("Ошибка сервиса геокодинга")
+        if city_query:
+            try:
+                geolocator = Nominatim(user_agent="sim_tracker_app")
+                location = geolocator.geocode(city_query)
+                if location:
+                    map_lat, map_lon = location.latitude, location.longitude
+                else:
+                    st.sidebar.warning("Локация не найдена")
+            except Exception:
+                st.sidebar.error("Ошибка сервиса геокодинга")
 
-                view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
+            view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
 
-                layer = pdk.Layer(
-                    "H3HexagonLayer",
-                    hex_df,
-                    get_hexagon="h3",
-                    get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
-                    pickable=True,
-                    extruded=False,
-                )
+            layer = pdk.Layer(
+                "H3HexagonLayer",
+                hex_df,
+                get_hexagon="h3",
+                get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
+                pickable=True,
+                extruded=False,
+            )
 
-                st.pydeck_chart(pdk.Deck(
-                    layers=[layer],
-                    initial_view_state=view_state,
-                    tooltip={"text": tooltip_txt}
-                ))
-            else:
-                st.warning("Нет данных по выбранным фильтрам")
+            st.pydeck_chart(pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={"text": tooltip_txt}
+            ))
+        else:
+            st.warning("Нет данных по выбранным фильтрам")
 
 
 # Страница "Цифры"
