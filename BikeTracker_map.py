@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import h3
 import pydeck as pdk
+import numpy as np
 from datetime import datetime
 from geopy.geocoders import Nominatim
 
@@ -136,7 +137,7 @@ with tab_map:
         
 # Если уровень не выбран в фильтре — пропускаем замер
                 if conf not in selected_conf:
-                    return None
+                    return np.nan
         
 # Расчёт интенсивности
                 n = len(group)
@@ -154,13 +155,15 @@ with tab_map:
                     hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
                     tooltip_txt = "Количество событий: {count}"
                 else:
-                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                    session_rates.columns = ['date_hour', 'h3', 'rate']
+                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index(name='rate')
                     session_rates = session_rates.dropna(subset=['rate'])
-                    hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
-                    hex_df.columns = ['h3', 'count']
-                    hex_df['count'] = hex_df['count'].round(1)
-                    tooltip_txt = "Интенсивность: {count} в час"
+                    if session_rates.empty:
+                        st.warning("Нет данных с выбранным уровнем достоверности")
+                    else:
+                        hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
+                        hex_df.columns = ['h3', 'count']
+                        hex_df['count'] = hex_df['count'].round(1)
+                        tooltip_txt = "Интенсивность: {count} в час"
 
         # Определение центра карты
             map_lat = filtered_df['latitude'].mean()
