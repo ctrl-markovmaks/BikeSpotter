@@ -115,39 +115,39 @@ with tab_map:
                 lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
             )
         
-                filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
+            filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
 
-                H3_SIZES_KM = {
-                    5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
-                    9: 0.29444, 10: 0.114312
-                } # Длины граней гексагонов * 1,732
+            H3_SIZES_KM = {
+                5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
+                9: 0.29444, 10: 0.114312
+            } # Длины граней гексагонов * 1,732
             
-                def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
-                    duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
-                    is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
+            def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
+                duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
+                is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
                     
                 # 1. Определение уровня достоверности
-                    if is_pro or duration_min >= 15.0:
-                        conf = "Высокая"
-                    elif duration_min >= 5.0:
-                        conf = "Средняя"
-                    else:
-                        conf = "Низкая"
+                if is_pro or duration_min >= 15.0:
+                    conf = "Высокая"
+                elif duration_min >= 5.0:
+                    conf = "Средняя"
+                else:
+                    conf = "Низкая"
         
     # 2. Если уровень не выбран в фильтре — пропускаем замер
-                    if conf not in selected_conf:
-                        return None
+                if conf not in selected_conf:
+                    return None
         
     # 3. Расчёт интенсивности
-                    n = len(group)
-                    duration_calc = max(duration_min, 1.0)
+                n = len(group)
+                duration_calc = max(duration_min, 1.0)
     
-                    if duration_calc >= 10.0 or is_pro:
-                        return (n * 60.0) / duration_calc
-                    else:
-                        hex_size_km = H3_SIZES_KM.get(effective_res, 0)
-                        walk_time_hours = hex_size_km / walk_speed_kmh
-                        return ((1.0 / walk_time_hours) * n) * discount
+                if duration_calc >= 10.0 or is_pro:
+                    return (n * 60.0) / duration_calc
+                else:
+                    hex_size_km = H3_SIZES_KM.get(effective_res, 0)
+                    walk_time_hours = hex_size_km / walk_speed_kmh
+                    return ((1.0 / walk_time_hours) * n) * discount
 
         # Выбор логики отображения
                 if map_mode == "Количество событий" or is_parking:
