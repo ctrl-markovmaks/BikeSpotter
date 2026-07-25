@@ -135,28 +135,26 @@ with tab_map:
                 else:
                     conf = "Низкая"
         
-# Если уровень не выбран в фильтре — пропускаем замер
-                if conf not in selected_conf:
-                    return np.nan
-        
 # Расчёт интенсивности
                 n = len(group)
                 duration_calc = max(duration_min, 1.0)
     
                 if duration_calc >= 10.0 or is_pro:
-                    return (n * 60.0) / duration_calc
+                    rete = (n * 60.0) / duration_calc
                 else:
                     hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                     walk_time_hours = hex_size_km / walk_speed_kmh
-                    return ((1.0 / walk_time_hours) * n) * discount
+                    rete ((1.0 / walk_time_hours) * n) * discount
+                return pd.Series({'rate': rate, 'conf': conf})
 
 # Выбор логики отображения
                 if map_mode == "Количество событий" or is_parking:
                     hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
                     tooltip_txt = "Количество событий: {count}"
                 else:
-                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index(name='rate')
-                    session_rates = session_rates.dropna(subset=['rate'])
+                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
+                    # Фильтрация по галочкам
+                    session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
                     if session_rates.empty:
                         st.warning("Нет данных с выбранным уровнем достоверности")
                     else:
