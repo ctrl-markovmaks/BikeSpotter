@@ -150,17 +150,17 @@ with tab_map:
                     return ((1.0 / walk_time_hours) * n) * discount
 
 # Выбор логики отображения
-            if map_mode == "Количество событий" or is_parking:
-                hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
-                tooltip_txt = "Количество событий: {count}"
-            else:
-                session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                session_rates.columns = ['date_hour', 'h3', 'rate']
-                session_rates = session_rates.dropna(subset=['rate'])
-                hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
-                hex_df.columns = ['h3', 'count']
-                hex_df['count'] = hex_df['count'].round(1)
-                tooltip_txt = "Интенсивность: {count} в час"
+                if map_mode == "Количество событий" or is_parking:
+                    hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
+                    tooltip_txt = "Количество событий: {count}"
+                else:
+                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
+                    session_rates.columns = ['date_hour', 'h3', 'rate']
+                    session_rates = session_rates.dropna(subset=['rate'])
+                    hex_df = session_rates.groupby('h3', as_index=False)['rate'].mean()
+                    hex_df.columns = ['h3', 'count']
+                    hex_df['count'] = hex_df['count'].round(1)
+                    tooltip_txt = "Интенсивность: {count} в час"
 
         # Определение центра карты
             map_lat = filtered_df['latitude'].mean()
