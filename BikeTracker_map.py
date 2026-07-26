@@ -80,10 +80,6 @@ with tab_map:
         f_mid = st.sidebar.checkbox("Средние (10–30 дней)", value=True)
         f_old = st.sidebar.checkbox("Старые (> 30 дней)", value=True)
 
-# Если хотя бы одна галочка выбрана — фильтруем, иначе оставляем всё
-        if f_fresh or f_mid or f_old:
-            filtered_df = filtered_df[filtered_df['days_ago'].apply(check_freshness)]
-
         min_date = df['dateTime'].dt.date.min()
         max_date = df['dateTime'].dt.date.max()
 
