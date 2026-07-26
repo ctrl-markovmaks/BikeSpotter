@@ -9,17 +9,14 @@ from geopy.geocoders import Nominatim
 
 st.set_page_config(layout="wide", page_title="BikeSpotter - мониторинг велопотока")
 
-creds = dict(st.secrets["gcp_service_account"])
-# Превращает буквенные '\n' в настоящие переносы строк
-creds["private_key"] = creds["private_key"].encode("utf-8").decode("unicode_escape")
-
-gc = gspread.service_account_from_dict(creds)
+gc = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
 sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1fa5x5gLaK-7aOAd0DgtIGX_A8EM3qFN3rwVPHEd6rHM/edit")
 worksheet = sh.sheet1
 
 @st.cache_data(ttl=60)
 def load_data():
-    df = pd.read_csv(SHEET_CSV_URL)
+    data = worksheet.get_all_records()
+    df = pd.DataFrame(data)
     df.columns = df.columns.str.strip()
     
     clean_date = df['date'].astype(str).str.split(' ').str[0]
