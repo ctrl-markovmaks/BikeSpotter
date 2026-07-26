@@ -249,7 +249,7 @@ with tab_map:
                 st.pydeck_chart(pdk.Deck(
                     layers=[layer],
                     initial_view_state=view_state,
-                    tooltip={"text": tooltip_txt}
+                    tooltip={"html": tooltip_txt}
                 ))
     else:
         st.warning("Нет данных по выбранным фильтрам")
