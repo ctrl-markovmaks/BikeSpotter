@@ -216,7 +216,7 @@ with tab_map:
                 else:
                     hex_df = session_rates.groupby('h3', as_index=False).agg(
                         count=('rate', 'mean'),
-                        conf=('conf', lambda x: ', '.join(x.unique()))
+                        conf=('conf', lambda x: ', '.join(x.unique())),
                         last_dt=('last_dt', 'max')
                     )
                     hex_df['count'] = hex_df['count'].round(1)
