@@ -80,16 +80,6 @@ with tab_map:
         f_mid = st.sidebar.checkbox("Средние (10–30 дней)", value=True)
         f_old = st.sidebar.checkbox("Старые (> 30 дней)", value=True)
 
-        # Определение категории свежести
-        now = pd.Timestamp.now()
-        filtered_df['days_ago'] = (now - filtered_df['dateTime']).dt.days
-
-        def check_freshness(days):
-            if days <= 10 and f_fresh: return True
-            if 10 < days <= 30 and f_mid: return True
-            if days > 30 and f_old: return True
-            return False
-
 # Если хотя бы одна галочка выбрана — фильтруем, иначе оставляем всё
             if f_fresh or f_mid or f_old:
                 filtered_df = filtered_df[filtered_df['days_ago'].apply(check_freshness)]
@@ -128,6 +118,11 @@ with tab_map:
             (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
             (df['dateTime'].dt.date >= date_start) & (df['dateTime'].dt.date <= date_end)
             ]
+        # определение свежести данных
+        now = pd.Timestamp.now()
+        days = (now - filtered_df['dateTime']).dt.days
+        mask = (f_fresh & (days <= 10)) | (f_mid & days.between(11, 30)) | (f_old & (days > 30))
+        filtered_df = filtered_df[mask]
 
         if not filtered_df.empty:
             map_lat = filtered_df['latitude'].mean()
