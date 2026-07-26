@@ -235,3 +235,9 @@ with tab_stats:
 with tab_about:
     st.header("О проекте")
     st.write("В разработке")
+    st.subheader("Метод расчёта интенсивности")
+    st.write("В разработке")
+    st.subheader("Достоверность данных")
+    st.write("В разработке")
+    st.subheader("В разработке")
+    st.write("В разработке")
