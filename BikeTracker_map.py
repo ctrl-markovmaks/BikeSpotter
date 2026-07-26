@@ -133,6 +133,9 @@ with tab_map:
                 5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
                 9: 0.29444, 10: 0.114312
             } # Длины граней гексагонов * 1,732
+            def format_last_seen(dt):
+                    days = (pd.Timestamp.now() - dt).days
+                    return f"Было {days} дн. назад в {dt.strftime('%H:%M (%d.%m.%Y)')}"
             
             def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
                 duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
@@ -163,10 +166,6 @@ with tab_map:
                     'conf': conf, 
                     'last_dt': group['dateTime'].max()
                 })
-                
-                def format_last_seen(dt):
-                    days = (pd.Timestamp.now() - dt).days
-                    return f"Было {days} дн. назад в {dt.strftime('%H:%M (%d.%m.%Y)')}"
                     
                     if map_mode == "Количество событий" or is_parking:
                         hex_df = filtered_df.groupby('h3', as_index=False).agg(
