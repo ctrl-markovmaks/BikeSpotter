@@ -255,7 +255,6 @@ with tab_map:
                 )
 
                 st.pydeck_chart(pdk.Deck(
-                    map_style='light'
                     layers=[layer],
                     initial_view_state=view_state,
                     tooltip={"html": tooltip_txt}
