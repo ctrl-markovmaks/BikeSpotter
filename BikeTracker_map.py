@@ -75,6 +75,25 @@ with tab_map:
         if not selected_conf:
             selected_conf = ["Низкая", "Средняя", "Высокая"]
 
+        st.sidebar.subheader("Свежесть данных")
+        f_fresh = st.sidebar.checkbox("Свежие (до 10 дней)", value=True)
+        f_mid = st.sidebar.checkbox("Средние (10–30 дней)", value=True)
+        f_old = st.sidebar.checkbox("Старые (> 30 дней)", value=True)
+
+        # Определение категории свежести
+        now = pd.Timestamp.now()
+        filtered_df['days_ago'] = (now - filtered_df['dateTime']).dt.days
+
+        def check_freshness(days):
+            if days <= 10 and f_fresh: return True
+            if 10 < days <= 30 and f_mid: return True
+            if days > 30 and f_old: return True
+                return False
+
+# Если хотя бы одна галочка выбрана — фильтруем, иначе оставляем всё
+            if f_fresh or f_mid or f_old:
+            filtered_df = filtered_df[filtered_df['days_ago'].apply(check_freshness)]
+
         min_date = df['dateTime'].dt.date.min()
         max_date = df['dateTime'].dt.date.max()
 
@@ -148,7 +167,44 @@ with tab_map:
                     hex_size_km = H3_SIZES_KM.get(effective_res, 0)
                     walk_time_hours = hex_size_km / walk_speed_kmh
                     rate = ((1.0 / walk_time_hours) * n) * discount
-                return pd.Series({'rate': rate, 'conf': conf})
+                return pd.Series({
+                    'rate': rate, 
+                    'conf': conf, 
+                    'last_dt': group['dateTime'].max()
+                })
+                
+                def format_last_seen(dt):
+                    days = (pd.Timestamp.now() - dt).days
+                    return f"Было {days} дн. назад в {dt.strftime('%H:%M (%d.%m.%Y)')}"
+                    
+                    if map_mode == "Количество событий" or is_parking:
+                        hex_df = filtered_df.groupby('h3', as_index=False).agg(
+                            count=('dateTime', 'size'),
+                            last_dt=('dateTime', 'max')
+                        )
+                        hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                        tooltip_txt = "Количество событий: {count}\n{last_seen}"
+                        has_data = not hex_df.empty
+                    else:
+                        session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(
+                            calc_session_rate, effective_res=effective_res
+                        ).reset_index()
+                        
+                        session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
+    
+                    if session_rates.empty:
+                        st.warning("Нет данных с выбранным уровнем достоверности")
+                        has_data = False
+                    else:
+                        hex_df = session_rates.groupby('h3', as_index=False).agg(
+                            count=('rate', 'mean'),
+                            conf=('conf', lambda x: ', '.join(x.unique())),
+                            last_dt=('last_dt', 'max')
+                        )
+                        hex_df['count'] = hex_df['count'].round(1)
+                        hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                        tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}\n{last_seen}"
+                        has_data = True
 
 # Выбор логики отображения
             if map_mode == "Количество событий" or is_parking:
