@@ -167,34 +167,34 @@ with tab_map:
                     'last_dt': group['dateTime'].max()
                 })
                     
-                    if map_mode == "Количество событий" or is_parking:
-                        hex_df = filtered_df.groupby('h3', as_index=False).agg(
-                            count=('dateTime', 'size'),
-                            last_dt=('dateTime', 'max')
-                        )
-                        hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                        tooltip_txt = "Количество событий: {count}\n{last_seen}"
-                        has_data = not hex_df.empty
-                    else:
-                        session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(
-                            calc_session_rate, effective_res=effective_res
-                        ).reset_index()
+                if map_mode == "Количество событий" or is_parking:
+                    hex_df = filtered_df.groupby('h3', as_index=False).agg(
+                        count=('dateTime', 'size'),
+                        last_dt=('dateTime', 'max')
+                    )
+                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                    tooltip_txt = "Количество событий: {count}\n{last_seen}"
+                    has_data = not hex_df.empty
+                else:
+                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(
+                        calc_session_rate, effective_res=effective_res
+                    ).reset_index()
                         
-                        session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
+                    session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
     
-                    if session_rates.empty:
-                        st.warning("Нет данных с выбранным уровнем достоверности")
-                        has_data = False
-                    else:
-                        hex_df = session_rates.groupby('h3', as_index=False).agg(
-                            count=('rate', 'mean'),
-                            conf=('conf', lambda x: ', '.join(x.unique())),
-                            last_dt=('last_dt', 'max')
-                        )
-                        hex_df['count'] = hex_df['count'].round(1)
-                        hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                        tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}\n{last_seen}"
-                        has_data = True
+                if session_rates.empty:
+                    st.warning("Нет данных с выбранным уровнем достоверности")
+                    has_data = False
+                else:
+                    hex_df = session_rates.groupby('h3', as_index=False).agg(
+                        count=('rate', 'mean'),
+                        conf=('conf', lambda x: ', '.join(x.unique())),
+                        last_dt=('last_dt', 'max')
+                    )
+                    hex_df['count'] = hex_df['count'].round(1)
+                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                    tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}\n{last_seen}"
+                    has_data = True
 
 # Выбор логики отображения
             if map_mode == "Количество событий" or is_parking:
