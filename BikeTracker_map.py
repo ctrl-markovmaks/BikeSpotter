@@ -15,8 +15,8 @@ worksheet = sh.sheet1
 
 @st.cache_data(ttl=60)
 def load_data():
-    data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
+    data = worksheet.get_all_values()
+    df = pd.DataFrame(data[1:], columns=data[0])
     df.columns = df.columns.str.strip()
     
     clean_date = df['date'].astype(str).str.split(' ').str[0]
