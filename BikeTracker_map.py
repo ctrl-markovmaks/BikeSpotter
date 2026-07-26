@@ -199,9 +199,13 @@ with tab_map:
 
 # Выбор логики отображения
             if map_mode == "Количество событий" or is_parking:
-                hex_df = filtered_df.groupby('h3', as_index=False).size().rename(columns={'size': 'count'})
-                tooltip_txt = "Количество событий: {count}"
-                has_data = True
+                hex_df = filtered_df.groupby('h3', as_index=False).agg(
+                    count=('dateTime', 'size'),
+                    last_dt=('dateTime', 'max')
+                )
+                hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                tooltip_txt = "<b>Количество событий:</b> {count}<br/>{last_seen}"
+                has_data = not hex_df.empty
             else:
                 session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
                 # Фильтрация по галочкам
@@ -213,9 +217,11 @@ with tab_map:
                     hex_df = session_rates.groupby('h3', as_index=False).agg(
                         count=('rate', 'mean'),
                         conf=('conf', lambda x: ', '.join(x.unique()))
+                        last_dt=('last_dt', 'max')
                     )
                     hex_df['count'] = hex_df['count'].round(1)
-                    tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}"
+                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
+                    tooltip_txt = "<b>Интенсивность:</b> {count} в час<br/><b>Достоверность:</b> {conf}<br/>{last_seen}"
                     has_data = True
                     
             if has_data:
