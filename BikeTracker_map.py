@@ -3,12 +3,15 @@ import pandas as pd
 import h3
 import pydeck as pdk
 import numpy as np
+import gspread
 from datetime import datetime
 from geopy.geocoders import Nominatim
 
 st.set_page_config(layout="wide", page_title="BikeSpotter - мониторинг велопотока")
 
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW_HFsvzJzCctICf5nIdonbSNujkQUuPbc9SepxI2GHeRF-xlWpVHBbSxxXjPKO3QdvxSRsekNBGRR/pub?output=csv"
+gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1fa5x5gLaK-7aOAd0DgtIGX_A8EM3qFN3rwVPHEd6rHM/edit")
+worksheet = sh.sheet1
 
 @st.cache_data(ttl=60)
 def load_data():
