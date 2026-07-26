@@ -50,7 +50,6 @@ with tab_map:
 
     st.sidebar.header("Bike Spotter")
     st.sidebar.caption("Собираем данные о велодвижении в городах")
-    st.sidebar.caption("Сайт энтузиаста для энтузиастов")
 
 # Фильтры
     st.sidebar.header("Фильтры")
