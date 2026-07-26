@@ -92,7 +92,7 @@ with tab_map:
 
 # Если хотя бы одна галочка выбрана — фильтруем, иначе оставляем всё
             if f_fresh or f_mid or f_old:
-            filtered_df = filtered_df[filtered_df['days_ago'].apply(check_freshness)]
+                filtered_df = filtered_df[filtered_df['days_ago'].apply(check_freshness)]
 
         min_date = df['dateTime'].dt.date.min()
         max_date = df['dateTime'].dt.date.max()
