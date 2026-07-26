@@ -10,7 +10,12 @@ from geopy.geocoders import Nominatim
 st.set_page_config(layout="wide", page_title="BikeSpotter - мониторинг велопотока")
 
 creds = dict(st.secrets["gcp_service_account"])
-creds["private_key"] = creds["private_key"].replace("\\n", "\n")
+# Декодирует как обычные \n, так и заэкранированные \\n
+pk = creds["private_key"]
+if "\\n" in pk:
+    pk = pk.replace("\\n", "\n")
+creds["private_key"] = pk.strip("'\"")
+
 gc = gspread.service_account_from_dict(creds)
 sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1fa5x5gLaK-7aOAd0DgtIGX_A8EM3qFN3rwVPHEd6rHM/edit")
 worksheet = sh.sheet1
