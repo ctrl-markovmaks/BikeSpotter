@@ -34,9 +34,10 @@ def load_data():
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
     return df
-raw_data = worksheet.get_all_values()
-st.write(f"Найдено строк: {len(raw_data)}")
-st.dataframe(raw_data)
+# Посмотреть, что видит сайт
+# raw_data = worksheet.get_all_values()
+# st.write(f"Найдено строк: {len(raw_data)}")
+# st.dataframe(raw_data)
 # Плашка с информацией. background-color - цвет подложки, color - цвет текста, padding, border-radius, font-weight. Цвета в HEX формате
 st.markdown(
     """
