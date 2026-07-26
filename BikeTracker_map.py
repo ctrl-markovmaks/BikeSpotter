@@ -88,7 +88,7 @@ with tab_map:
             if days <= 10 and f_fresh: return True
             if 10 < days <= 30 and f_mid: return True
             if days > 30 and f_old: return True
-                return False
+            return False
 
 # Если хотя бы одна галочка выбрана — фильтруем, иначе оставляем всё
             if f_fresh or f_mid or f_old:
