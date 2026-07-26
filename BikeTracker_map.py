@@ -33,7 +33,7 @@ def load_data():
     df = df[(df['latitude'].between(-90, 90)) & (df['longitude'].between(-180, 180))]
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
-    return df
+    return st.write(len(df))
 # Плашка с информацией. background-color - цвет подложки, color - цвет текста, padding, border-radius, font-weight. Цвета в HEX формате
 st.markdown(
     """
