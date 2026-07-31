@@ -118,12 +118,6 @@ with tab_map:
         is_parking = "парк" in str(event).lower()
         is_intensity_drive = (map_mode == "Интенсивность") and (not is_parking)
 
-# Если выбрана Интенсивность+Проезд и размер 11 или 12 — скрываем карту и выводим предупреждение
-        if is_intensity_drive and resolution > 10:
-            st.warning("Расчёт интенсивности для проездов доступен только для размеров гексагона от 5 до 10. Пожалуйста, уменьшите размер или переключите режим на 'Количество событий'.")
-        else:
-            effective_res = resolution
-
         filtered_df = df[
             (df['eventType'] == event) & 
             (df['hour'] >= hours[0]) & (df['hour'] <= hours[1]) &
