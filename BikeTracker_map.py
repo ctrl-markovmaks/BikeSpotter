@@ -114,6 +114,8 @@ with tab_map:
 
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
+        search_radius = 2000
+
 # Проверяем, выбран ли режим интенсивности для проезда
         is_parking = "парк" in str(event).lower()
         is_intensity_drive = (map_mode == "Интенсивность") and (not is_parking)
