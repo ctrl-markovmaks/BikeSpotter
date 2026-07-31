@@ -1,6 +1,7 @@
 streamlit
 pandas
 pydeck
-h3
-geopy
+numpy
 gspread
+osmnx
+geopandas
