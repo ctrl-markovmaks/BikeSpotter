@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-import h3
 import pydeck as pdk
 import numpy as np
 import gspread
+import osmnx as ox
+import geopandas as gpd
 from datetime import datetime
 from geopy.geocoders import Nominatim
 
@@ -38,6 +39,16 @@ def load_data():
 # raw_data = worksheet.get_all_values()
 # st.write(f"Найдено строк: {len(raw_data)}")
 # st.dataframe(raw_data)
+
+# Кэширование загрузки графа OSMnx, чтобы не скачивать карту заново при каждом переключении фильтров ###############################
+
+@st.cache_resource(ttl=3600)
+def load_osm_graph(lat, lon, dist=2000):
+    lat_r, lon_r = round(float(lat), 2), round(float(lon), 2)
+    # network_type='all' скачивает автодороги, тротуары, велодорожки и дворовые проезды
+    G = ox.graph_from_point((lat_r, lon_r), dist=dist, network_type='all')
+    return G
+
 # Плашка с информацией. background-color - цвет подложки, color - цвет текста, padding, border-radius, font-weight. Цвета в HEX формате
 st.markdown(
     """
@@ -103,10 +114,6 @@ with tab_map:
 
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
-    # Установка возможных размеров гексагонов и размер по умолчанию
-        resolution = st.sidebar.slider("Размер гексагона", min_value=7, max_value=12, value=10) 
-        st.sidebar.caption("Рекомендации: 7-9 между крупными точками, 10 для перемещений по району, 12 для детального анализа (только для фильтра Количество событий)")
-
 # Проверяем, выбран ли режим интенсивности для проезда
         is_parking = "парк" in str(event).lower()
         is_intensity_drive = (map_mode == "Интенсивность") and (not is_parking)
@@ -131,137 +138,123 @@ with tab_map:
         if not filtered_df.empty:
             map_lat = filtered_df['latitude'].mean()
             map_lon = filtered_df['longitude'].mean()
-            filtered_df['h3'] = filtered_df.apply(
-                lambda r: h3.latlng_to_cell(r['latitude'], r['longitude'], effective_res), axis=1
-            )
         
-            filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
+            if city_query:
+                try:
+                    geolocator = Nominatim(user_agent="sim_tracker_app")
+                    location = geolocator.geocode(city_query)
+                    if location:
+                        map_lat, map_lon = location.latitude, location.longitude
+                    else:
+                        st.sidebar.warning("Локация не найдена")
+                except Exception:
+                    st.sidebar.error("Ошибка сервиса геокодинга")
 
-            H3_SIZES_KM = {
-                5: 14.79128, 6: 5.59436, 7: 2.11304, 8: 0.79672,
-                9: 0.29444, 10: 0.114312
-            } # Длины граней гексагонов * 1,732
-            def format_last_seen(dt):
-                    days = (pd.Timestamp.now() - dt).days
-                    return f"Было {days} дн. назад в {dt.strftime('%H:%M (%d.%m.%Y)')}"
-            
-            def calc_session_rate(group, effective_res, walk_speed_kmh=4, discount=0.75):
-                duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
-                is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
-                    
-# Определение уровня достоверности
-                if effective_res <= 8:
-                    conf = "Низкая"
-                elif is_pro or duration_min >= 15.0:
-                    conf = "Высокая"
-                elif duration_min >= 5.0:
-                    conf = "Средняя"
-                else:
-                    conf = "Низкая"
-        
-# Расчёт интенсивности
-                n = len(group)
-                duration_calc = max(duration_min, 1.0)
-    
-                if duration_calc >= 10.0 or is_pro:
-                    rate = (n * 60.0) / duration_calc
-                else:
-                    hex_size_km = H3_SIZES_KM.get(effective_res, 0)
-                    walk_time_hours = hex_size_km / walk_speed_kmh
-                    rate = ((1.0 / walk_time_hours) * n) * discount
-                return pd.Series({
-                    'rate': rate, 
-                    'conf': conf, 
-                    'last_dt': group['dateTime'].max()
-                })
-                    
-                if map_mode == "Количество событий" or is_parking:
-                    hex_df = filtered_df.groupby('h3', as_index=False).agg(
-                        count=('dateTime', 'size'),
-                        last_dt=('dateTime', 'max')
-                    )
-                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                    tooltip_txt = "Количество событий: {count}\n{last_seen}"
-                    has_data = not hex_df.empty
-                else:
-                    session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(
-                        calc_session_rate, effective_res=effective_res
-                    ).reset_index()
+            with st.spinner("Загрузка сети улиц и тротуаров из OpenStreetMap..."):
+                try:
+                    G = load_osm_graph(map_lat, map_lon, dist=search_radius)
+                    edges_gdf = ox.graph_to_gdfs(G, nodes=False)
+
+                    # Автоматически привязываем точки к ближайшему отрезку OSM
+                    nearest_e = ox.nearest_edges(G, X=filtered_df['longitude'].values, Y=filtered_df['latitude'].values)
+                    filtered_df['edge_id'] = [f"{u}_{v}_{k}" for u, v, k in nearest_e]
+
+                    filtered_df['date_hour'] = filtered_df['dateTime'].dt.floor('h')
+
+                    def format_last_seen(dt):
+                        d = (pd.Timestamp.now() - dt).days
+                        return f"Было {d} дн. назад в {dt.strftime('%H:%M (%d.%m.%Y)')}"
+
+                    def calc_session_rate(group, discount=0.75):
+                        duration_min = (group['dateTime'].max() - group['dateTime'].min()).total_seconds() / 60.0
+                        is_pro = group['is_pro'].any() if 'is_pro' in group.columns else False
                         
-                    session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
-    
-                if session_rates.empty:
-                    st.warning("Нет данных с выбранным уровнем достоверности")
-                    has_data = False
-                else:
-                    hex_df = session_rates.groupby('h3', as_index=False).agg(
-                        count=('rate', 'mean'),
-                        conf=('conf', lambda x: ', '.join(x.unique())),
-                        last_dt=('last_dt', 'max')
-                    )
-                    hex_df['count'] = hex_df['count'].round(1)
-                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                    tooltip_txt = "Интенсивность: {count} в час\nДостоверность: {conf}\n{last_seen}"
-                    has_data = True
-
-# Выбор логики отображения
-            if map_mode == "Количество событий" or is_parking:
-                hex_df = filtered_df.groupby('h3', as_index=False).agg(
-                    count=('dateTime', 'size'),
-                    last_dt=('dateTime', 'max')
-                )
-                hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                tooltip_txt = "<b>Количество событий:</b> {count}<br/>{last_seen}"
-                has_data = not hex_df.empty
-            else:
-                session_rates = filtered_df.groupby(['date_hour', 'h3']).apply(calc_session_rate, effective_res=effective_res).reset_index()
-                # Фильтрация по галочкам
-                session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
-                if session_rates.empty:
-                    st.warning("Нет данных с выбранным уровнем достоверности")
-                    has_data = False
-                else:
-                    hex_df = session_rates.groupby('h3', as_index=False).agg(
-                        count=('rate', 'mean'),
-                        conf=('conf', lambda x: ', '.join(x.unique())),
-                        last_dt=('last_dt', 'max')
-                    )
-                    hex_df['count'] = hex_df['count'].round(1)
-                    hex_df['last_seen'] = hex_df['last_dt'].apply(format_last_seen)
-                    tooltip_txt = "<b>Интенсивность:</b> {count} в час<br/><b>Достоверность:</b> {conf}<br/>{last_seen}"
-                    has_data = True
-                    
-            if has_data:
-                if city_query:
-                    try:
-                        geolocator = Nominatim(user_agent="sim_tracker_app")
-                        location = geolocator.geocode(city_query)
-                        if location:
-                            map_lat, map_lon = location.latitude, location.longitude
+                        if is_pro or duration_min >= 15.0:
+                            conf = "Высокая"
+                        elif duration_min >= 5.0:
+                            conf = "Средняя"
                         else:
-                            st.sidebar.warning("Локация не найдена")
-                    except Exception:
-                        st.sidebar.error("Ошибка сервиса геокодинга")
+                            conf = "Низкая"
 
-                view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=13, pitch=0)
+                        n = len(group)
+                        duration_calc = max(duration_min, 1.0)
 
-                layer = pdk.Layer(
-                    "H3HexagonLayer",
-                    hex_df,
-                    get_hexagon="h3",
-                    get_fill_color="[255, (1 - count / 20) * 255, 0, 180]",
-                    pickable=True,
-                    extruded=False,
-                )
+                        if duration_calc >= 10.0 or is_pro:
+                            rate = (n * 60.0) / duration_calc
+                        else:
+                            rate = (n * 12.0) * discount
 
-                st.pydeck_chart(pdk.Deck(
-                    layers=[layer],
-                    initial_view_state=view_state,
-                    tooltip={"html": tooltip_txt}
-                ))
+                        return pd.Series({
+                            'rate': rate, 
+                            'conf': conf, 
+                            'last_dt': group['dateTime'].max()
+                        })
+
+                    if map_mode == "Количество событий" or is_parking:
+                        edge_stats = filtered_df.groupby('edge_id', as_index=False).agg(
+                            count=('dateTime', 'size'),
+                            last_dt=('dateTime', 'max')
+                        )
+                        edge_stats['last_seen'] = edge_stats['last_dt'].apply(format_last_seen)
+                        tooltip_txt = "<b>Количество событий:</b> {count}<br/>{last_seen}"
+                        has_data = not edge_stats.empty
+                    else:
+                        session_rates = filtered_df.groupby(['date_hour', 'edge_id']).apply(calc_session_rate).reset_index()
+                        session_rates = session_rates[session_rates['conf'].isin(selected_conf)]
+
+                        if session_rates.empty:
+                            st.warning("Нет данных с выбранным уровнем достоверности")
+                            has_data = False
+                        else:
+                            edge_stats = session_rates.groupby('edge_id', as_index=False).agg(
+                                count=('rate', 'mean'),
+                                conf=('conf', lambda x: ', '.join(x.unique())),
+                                last_dt=('last_dt', 'max')
+                            )
+                            edge_stats['count'] = edge_stats['count'].round(1)
+                            edge_stats['last_seen'] = edge_stats['last_dt'].apply(format_last_seen)
+                            tooltip_txt = "<b>Интенсивность:</b> {count} в час<br/><b>Достоверность:</b> {conf}<br/>{last_seen}"
+                            has_data = True
+
+                    if has_data:
+                        # Сопоставляем агрегированную статистику с геометрией улиц
+                        edges_gdf['edge_id'] = [f"{u}_{v}_{k}" for u, v, k in edges_gdf.index]
+                        map_data = edges_gdf.merge(edge_stats, on='edge_id', how='inner')
+
+                        # Преобразуем координаты отрезка в формат для PyDeck
+                        map_data['path'] = map_data['geometry'].apply(lambda geom: [list(coord) for coord in geom.coords])
+
+                        # Задаем цвет отрезка (от желтого к красному в зависимости от нагрузки)
+                        max_cnt = max(map_data['count'].max(), 1)
+                        map_data['color'] = map_data['count'].apply(
+                            lambda c: [255, int((1 - min(c / max_cnt, 1.0)) * 255), 0, 220]
+                        )
+
+                        view_state = pdk.ViewState(latitude=map_lat, longitude=map_lon, zoom=14, pitch=0)
+
+                        layer = pdk.Layer(
+                            "PathLayer",
+                            map_data,
+                            get_path="path",
+                            get_color="color",
+                            get_width=6,
+                            width_min_pixels=3,
+                            pickable=True,
+                        )
+
+                        st.pydeck_chart(pdk.Deck(
+                            map_style="light",
+                            layers=[layer],
+                            initial_view_state=view_state,
+                            tooltip={"html": tooltip_txt}
+                        ))
+
+                except Exception as e:
+                    st.error(f"Ошибка при обработке графа улиц OSM: {e}")
+        else:
+            st.warning("Нет данных по выбранным фильтрам")
     else:
-        st.warning("Нет данных по выбранным фильтрам")
-
+        st.warning("Таблица пока пуста")
 
 # Страница "Цифры"
 with tab_stats:
