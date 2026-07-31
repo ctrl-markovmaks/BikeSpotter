@@ -5,3 +5,4 @@ numpy
 gspread
 osmnx
 geopandas
+geopy
