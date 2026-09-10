@@ -43,7 +43,7 @@ def load_data():
 # Кэширование загрузки графа OSMnx, чтобы не скачивать карту заново при каждом переключении фильтров ###############################
 
 @st.cache_resource(ttl=3600)
-def load_osm_graph(lat, lon, dist=4000):
+def load_osm_graph(lat, lon, dist=5000):
     lat_r, lon_r = round(float(lat), 2), round(float(lon), 2)
     # network_type='all' скачивает автодороги, тротуары, велодорожки и дворовые проезды
     G = ox.graph_from_point((lat_r, lon_r), dist=dist, network_type='all')
@@ -114,7 +114,7 @@ with tab_map:
 
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
-        search_radius = 5000
+        search_radius = 5500
 
 # Проверяем, выбран ли режим интенсивности для проезда
         is_parking = "парк" in str(event).lower()
