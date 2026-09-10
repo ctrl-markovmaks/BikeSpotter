@@ -35,7 +35,7 @@ def load_data():
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     
     return df
-# Посмотреть, что видит сайт
+# Посмотреть, что из таблицы видит сайт
 # raw_data = worksheet.get_all_values()
 # st.write(f"Найдено строк: {len(raw_data)}")
 # st.dataframe(raw_data)
@@ -114,7 +114,7 @@ with tab_map:
 
         hours = st.sidebar.slider("Часы суток", 0, 23, (0, 23))
 
-        search_radius = 200000
+        search_radius = 20000
 
 # Проверяем, выбран ли режим интенсивности для проезда
         is_parking = "парк" in str(event).lower()
